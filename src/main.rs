@@ -1,8 +1,11 @@
 use clap::Parser;
-use strategy::{PortRange, ScanStrategy, Strategy, TcpConnectScan, TcpHalfOpenScan, UdpScan};
+use scanners::{
+    strategies::{TcpConnectScan, TcpHalfOpenScan, UdpScan},
+    PortRange, ScanStrategy, Strategy,
+};
 
 mod results;
-mod strategy;
+mod scanners;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]

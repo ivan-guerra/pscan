@@ -3,6 +3,8 @@ use clap::ValueEnum;
 use std::fmt::Display;
 use std::str::FromStr;
 
+pub mod strategies;
+
 #[derive(Debug, Clone)]
 pub struct PortRange {
     pub start: u16,
@@ -56,43 +58,4 @@ pub trait Strategy {
         addr: &std::net::IpAddr,
         port_range: &PortRange,
     ) -> Result<ScanResults, Box<dyn std::error::Error>>;
-}
-
-pub struct TcpHalfOpenScan;
-
-impl Strategy for TcpHalfOpenScan {
-    fn scan(
-        &self,
-        addr: &std::net::IpAddr,
-        port_range: &PortRange,
-    ) -> Result<ScanResults, Box<dyn std::error::Error>> {
-        println!("TCP half-open scan on {} on ports {}", addr, port_range);
-        Ok(ScanResults::default())
-    }
-}
-
-pub struct TcpConnectScan;
-
-impl Strategy for TcpConnectScan {
-    fn scan(
-        &self,
-        addr: &std::net::IpAddr,
-        port_range: &PortRange,
-    ) -> Result<ScanResults, Box<dyn std::error::Error>> {
-        println!("TCP connect scan on {} on ports {}", addr, port_range);
-        Ok(ScanResults::default())
-    }
-}
-
-pub struct UdpScan;
-
-impl Strategy for UdpScan {
-    fn scan(
-        &self,
-        addr: &std::net::IpAddr,
-        port_range: &PortRange,
-    ) -> Result<ScanResults, Box<dyn std::error::Error>> {
-        println!("UDP scan on {} on ports {}", addr, port_range);
-        Ok(ScanResults::default())
-    }
 }
