@@ -1,8 +1,8 @@
 use clap::Parser;
 use once_cell::sync::Lazy;
 use scanners::{
-    strategies::{TcpConnectScan, UdpScan},
-    PortRange, ScanStrategy, Strategy,
+    strategies::{TcpScanner, UdpScanner},
+    PortRange, Scan, ScanProtocol,
 };
 use std::collections::HashMap;
 
@@ -49,10 +49,10 @@ struct Args {
         short,
         long,
         value_enum,
-        default_value_t = ScanStrategy::TcpConnect,
+        default_value_t = ScanProtocol::Tcp,
         help = "Scan strategy"
     )]
-    strategy: ScanStrategy,
+    strategy: ScanProtocol,
 
     #[arg(short, long, default_value_t, help = "Port range to scan")]
     port_range: PortRange,
@@ -79,8 +79,8 @@ fn print_results(args: &Args, results: results::ScanResults, duration: std::time
     println!("{:<10} {:<10} {:<10}", "PORT", "STATE", "SERVICE");
     for result in results {
         let service = match result.protocol {
-            results::ScanProtocol::Tcp => TCP_SERVICES.get(&result.port),
-            results::ScanProtocol::Udp => UDP_SERVICES.get(&result.port),
+            ScanProtocol::Tcp => TCP_SERVICES.get(&result.port),
+            ScanProtocol::Udp => UDP_SERVICES.get(&result.port),
         }
         .unwrap_or(&"unknown");
 
@@ -99,19 +99,19 @@ fn print_results(args: &Args, results: results::ScanResults, duration: std::time
 }
 
 fn run(args: Args) -> Result<(), Box<dyn std::error::Error>> {
-    let get_strategy = |strategy: &ScanStrategy| -> Box<dyn Strategy> {
+    let get_scanner = |strategy: &ScanProtocol| -> Box<dyn Scan> {
         match strategy {
-            ScanStrategy::TcpConnect => Box::new(TcpConnectScan),
-            ScanStrategy::Udp => Box::new(UdpScan),
+            ScanProtocol::Tcp => Box::new(TcpScanner),
+            ScanProtocol::Udp => Box::new(UdpScanner),
         }
     };
 
-    let strategy = get_strategy(&args.strategy);
+    let scanner = get_scanner(&args.strategy);
     let start_time = std::time::Instant::now();
-    let result = strategy.scan(&args.addr, &args.port_range)?;
+    let results = scanner.scan(&args.addr, &args.port_range)?;
     let duration = start_time.elapsed();
 
-    print_results(&args, result, duration);
+    print_results(&args, results, duration);
 
     Ok(())
 }

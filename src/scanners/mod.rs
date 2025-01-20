@@ -46,12 +46,23 @@ impl FromStr for PortRange {
 }
 
 #[derive(Debug, Clone, ValueEnum)]
-pub enum ScanStrategy {
-    TcpConnect,
+pub enum ScanProtocol {
+    Tcp,
     Udp,
 }
 
-pub trait Strategy {
+impl Display for ScanProtocol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let protocol = match self {
+            ScanProtocol::Tcp => "tcp",
+            ScanProtocol::Udp => "udp",
+        };
+
+        write!(f, "{}", protocol)
+    }
+}
+
+pub trait Scan {
     fn scan(
         &self,
         addr: &std::net::IpAddr,

@@ -1,14 +1,14 @@
 use crate::{
-    results::{PortState, ScanProtocol, ScanResult},
-    scanners::{PortRange, ScanResults, Strategy},
+    results::{PortState, ScanResult},
+    scanners::{PortRange, Scan, ScanProtocol, ScanResults},
 };
 use std::net::ToSocketAddrs;
 use std::net::UdpSocket;
 use std::time::Duration;
 
-pub struct UdpScan;
+pub struct UdpScanner;
 
-impl Strategy for UdpScan {
+impl Scan for UdpScanner {
     fn scan(
         &self,
         addr: &std::net::IpAddr,
@@ -32,7 +32,7 @@ impl Strategy for UdpScan {
     }
 }
 
-pub fn check_udp_connection<A: ToSocketAddrs>(
+fn check_udp_connection<A: ToSocketAddrs>(
     addr: A,
 ) -> Result<PortState, Box<dyn std::error::Error>> {
     let socket = UdpSocket::bind("0.0.0.0:0")?;

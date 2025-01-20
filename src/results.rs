@@ -1,21 +1,7 @@
 use clap::ValueEnum;
 use std::fmt::Display;
 
-pub enum ScanProtocol {
-    Tcp,
-    Udp,
-}
-
-impl Display for ScanProtocol {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let protocol = match self {
-            ScanProtocol::Tcp => "tcp",
-            ScanProtocol::Udp => "udp",
-        };
-
-        write!(f, "{}", protocol)
-    }
-}
+use crate::scanners::ScanProtocol;
 
 #[derive(Debug, PartialEq, Clone, ValueEnum)]
 pub enum PortState {

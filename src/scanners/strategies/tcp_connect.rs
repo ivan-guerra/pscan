@@ -1,11 +1,11 @@
-use crate::results::{PortState, ScanProtocol, ScanResult};
-use crate::scanners::{PortRange, ScanResults, Strategy};
+use crate::results::{PortState, ScanResult};
+use crate::scanners::{PortRange, Scan, ScanProtocol, ScanResults};
 use std::net::{TcpStream, ToSocketAddrs};
 use std::time::Duration;
 
-pub struct TcpConnectScan;
+pub struct TcpScanner;
 
-impl Strategy for TcpConnectScan {
+impl Scan for TcpScanner {
     fn scan(
         &self,
         addr: &std::net::IpAddr,
