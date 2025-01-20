@@ -38,12 +38,15 @@ fn print_results(
         .iter()
         .filter(|r| r.state == results::PortState::Filtered)
         .count();
-    println!("Not shown: {} filtered ports", num_filtered);
-
-    println!("{:8} {:10}", "PORT", "STATE");
-    for result in results {
-        println!("{}", result);
+    if num_filtered > 0 {
+        println!("Not shown: {} filtered ports", num_filtered);
     }
+
+    println!("{:12} {:12}", "PORT", "STATE");
+    results
+        .iter()
+        .filter(|r| r.state != results::PortState::Filtered)
+        .for_each(|r| println!("{}", r));
 
     println!(
         "\npscan done: scanned in {:.2} seconds",
