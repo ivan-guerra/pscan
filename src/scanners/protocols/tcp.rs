@@ -76,9 +76,6 @@ fn check_tcp_connection<A: ToSocketAddrs>(addr: A) -> Option<PortState> {
     match TcpStream::connect_timeout(&target, Duration::from_millis(25)) {
         Ok(_) => Some(PortState::Open),
         Err(e) if e.kind() == std::io::ErrorKind::ConnectionRefused => Some(PortState::Closed),
-        Err(e) => {
-            eprintln!("Connection error for {}: {}", target, e);
-            Some(PortState::Filtered)
-        }
+        Err(_) => Some(PortState::Filtered),
     }
 }
