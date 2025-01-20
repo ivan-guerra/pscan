@@ -64,10 +64,13 @@ impl Scan for UdpScanner {
             }
         }
 
-        Arc::try_unwrap(results)
+        let mut results = Arc::try_unwrap(results)
             .expect("Failed to unwrap Arc")
             .into_inner()
-            .expect("Failed to acquire mutex lock")
+            .expect("Failed to acquire mutex lock");
+        results.sort_by(|a, b| a.port.cmp(&b.port));
+
+        results
     }
 }
 
