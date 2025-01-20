@@ -3,7 +3,9 @@ use clap::ValueEnum;
 use std::fmt::Display;
 use std::str::FromStr;
 
-pub mod strategies;
+pub mod protocols;
+pub use protocols::TcpScanner;
+pub use protocols::UdpScanner;
 
 #[derive(Debug, Clone)]
 pub struct PortRange {

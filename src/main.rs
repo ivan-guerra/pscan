@@ -1,9 +1,6 @@
 use clap::Parser;
 use once_cell::sync::Lazy;
-use scanners::{
-    strategies::{TcpScanner, UdpScanner},
-    PortRange, Scan, ScanProtocol,
-};
+use scanners::{PortRange, Scan, ScanProtocol, TcpScanner, UdpScanner};
 use std::collections::HashMap;
 
 mod results;
