@@ -10,6 +10,9 @@ use std::time::Duration;
 pub struct UdpScanner;
 
 impl Scan for UdpScanner {
+    /// Performs a UDP port scan on the specified IP address within the given port range.
+    ///
+    /// The scan is performed using multiple threads (up to 16) to improve performance.
     fn scan(&self, addr: &std::net::IpAddr, port_range: &PortRange) -> ScanResults {
         let ports: Vec<u16> = (port_range.start..=port_range.end).collect();
         let n_threads = num_cpus::get().min(16);
@@ -68,6 +71,7 @@ impl Scan for UdpScanner {
     }
 }
 
+/// Checks the state of a UDP port by sending an empty datagram and analyzing the response.
 fn check_udp_port(socket: &UdpSocket, addr: &str) -> Option<PortState> {
     let target_addr = match addr.to_socket_addrs() {
         Ok(mut addrs) => match addrs.next() {

@@ -1,9 +1,20 @@
+//! A fast, multi-threaded port scanner implementation in Rust.
+//!
+//! This program provides command-line functionality to scan TCP and UDP
+//! ports on specified IP addresses. It features:
+//!
+//! - Multi-threaded scanning for improved performance
+//! - Support for both TCP and UDP protocols
+//! - Customizable port ranges
+//! - Service name resolution using IANA registries
+//! - Filterable output based on port states
 use clap::Parser;
 use scanners::{PortRange, Scan, ScanProtocol, TcpScanner, UdpScanner};
 
 mod results;
 mod scanners;
 
+#[doc(hidden)]
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -26,6 +37,7 @@ struct Args {
     ignored_state: Vec<results::PortState>,
 }
 
+#[doc(hidden)]
 fn run(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     let get_scanner = |strategy: &ScanProtocol| -> Box<dyn Scan> {
         match strategy {
@@ -44,6 +56,7 @@ fn run(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[doc(hidden)]
 fn main() {
     let args = Args::parse();
     if let Err(e) = run(args) {

@@ -8,6 +8,9 @@ use std::time::Duration;
 pub struct TcpScanner;
 
 impl Scan for TcpScanner {
+    /// Performs a TCP port scan on the specified IP address within the given port range.
+    ///
+    /// The scan is performed using multiple threads (up to 16).
     fn scan(&self, addr: &std::net::IpAddr, port_range: &PortRange) -> ScanResults {
         let ports: Vec<u16> = (port_range.start..=port_range.end).collect();
         let n_threads = num_cpus::get().min(16);
@@ -51,6 +54,7 @@ impl Scan for TcpScanner {
     }
 }
 
+/// Attempts to establish a TCP connection to the specified address and determines the port state.
 fn check_tcp_connection<A: ToSocketAddrs>(addr: A) -> Option<PortState> {
     let target = match addr.to_socket_addrs() {
         Ok(mut addrs) => match addrs.next() {
