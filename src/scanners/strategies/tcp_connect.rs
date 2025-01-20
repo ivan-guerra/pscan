@@ -37,7 +37,7 @@ fn check_tcp_connection<A: ToSocketAddrs>(
         .next()
         .ok_or("Invalid socket address")?;
 
-    let timeout = Duration::from_millis(250);
+    let timeout = Duration::from_millis(25);
     match TcpStream::connect_timeout(&target, timeout) {
         Ok(_) => Ok(PortState::Open),
         Err(e) if e.kind() == std::io::ErrorKind::ConnectionRefused => Ok(PortState::Closed),
