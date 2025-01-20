@@ -45,7 +45,6 @@ impl FromStr for PortRange {
 
 #[derive(Debug, Clone, ValueEnum)]
 pub enum ScanStrategy {
-    Ping,
     TcpHalfOpen,
     TcpConnect,
     Udp,
@@ -57,19 +56,6 @@ pub trait Strategy {
         addr: &std::net::IpAddr,
         port_range: &PortRange,
     ) -> Result<ScanResults, Box<dyn std::error::Error>>;
-}
-
-pub struct PingScan;
-
-impl Strategy for PingScan {
-    fn scan(
-        &self,
-        addr: &std::net::IpAddr,
-        port_range: &PortRange,
-    ) -> Result<ScanResults, Box<dyn std::error::Error>> {
-        println!("Pinging {} on ports {}", addr, port_range);
-        Ok(ScanResults::default())
-    }
 }
 
 pub struct TcpHalfOpenScan;

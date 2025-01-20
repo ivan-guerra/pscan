@@ -1,7 +1,5 @@
 use clap::Parser;
-use strategy::{
-    PingScan, PortRange, ScanStrategy, Strategy, TcpConnectScan, TcpHalfOpenScan, UdpScan,
-};
+use strategy::{PortRange, ScanStrategy, Strategy, TcpConnectScan, TcpHalfOpenScan, UdpScan};
 
 mod results;
 mod strategy;
@@ -16,7 +14,7 @@ struct Args {
         short,
         long,
         value_enum,
-        default_value_t = ScanStrategy::Ping,
+        default_value_t = ScanStrategy::TcpHalfOpen,
         help = "Scan strategy"
     )]
     strategy: ScanStrategy,
@@ -53,7 +51,6 @@ fn print_results(
 fn run(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     let get_strategy = |strategy: ScanStrategy| -> Box<dyn Strategy> {
         match strategy {
-            ScanStrategy::Ping => Box::new(PingScan),
             ScanStrategy::TcpHalfOpen => Box::new(TcpHalfOpenScan),
             ScanStrategy::TcpConnect => Box::new(TcpConnectScan),
             ScanStrategy::Udp => Box::new(UdpScan),
