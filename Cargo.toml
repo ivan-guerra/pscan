@@ -2,9 +2,12 @@
 name = "pscan"
 version = "0.1.0"
 edition = "2021"
-description = "A port scanner"
+description = "A TCP/UDP port scanner"
 license = "Unlicense"
 
 [dependencies]
+# Command line argument parsing
 clap = {version = "4.5.26", features = ["derive"]}
+
+# Static map initialization
 once_cell = "1.20.2"
