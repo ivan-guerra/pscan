@@ -1,5 +1,5 @@
-pub mod tcp_connect;
+pub mod tcp;
 pub mod udp;
 
-pub use tcp_connect::TcpScanner;
+pub use tcp::TcpScanner;
 pub use udp::UdpScanner;
