@@ -1,3 +1,4 @@
+use clap::ValueEnum;
 use std::fmt::Display;
 
 pub enum ScanProtocol {
@@ -16,7 +17,7 @@ impl Display for ScanProtocol {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq, Clone, ValueEnum)]
 pub enum PortState {
     Open,
     Closed,

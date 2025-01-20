@@ -56,15 +56,25 @@ struct Args {
 
     #[arg(short, long, default_value_t, help = "Port range to scan")]
     port_range: PortRange,
+
+    #[arg(short, long, help = "Port states ignored in the scan output")]
+    ignored_state: Vec<results::PortState>,
 }
 
-fn print_results(
-    ip: std::net::IpAddr,
-    ports: PortRange,
-    results: results::ScanResults,
-    duration: std::time::Duration,
-) {
-    println!("pscan report for {}:{}", ip, ports);
+fn print_results(args: &Args, results: results::ScanResults, duration: std::time::Duration) {
+    println!("pscan report for {}:{}", args.addr, args.port_range);
+
+    for state in &args.ignored_state {
+        let ignored_cnt = results.iter().filter(|r| r.state == *state).count();
+        if ignored_cnt > 0 {
+            println!("Not shown: {} {} ports", ignored_cnt, state);
+        }
+    }
+
+    let results = results
+        .into_iter()
+        .filter(|r| !args.ignored_state.contains(&r.state))
+        .collect::<Vec<_>>();
 
     println!("{:<10} {:<10} {:<10}", "PORT", "STATE", "SERVICE");
     for result in results {
@@ -89,7 +99,7 @@ fn print_results(
 }
 
 fn run(args: Args) -> Result<(), Box<dyn std::error::Error>> {
-    let get_strategy = |strategy: ScanStrategy| -> Box<dyn Strategy> {
+    let get_strategy = |strategy: &ScanStrategy| -> Box<dyn Strategy> {
         match strategy {
             ScanStrategy::TcpHalfOpen => Box::new(TcpHalfOpenScan),
             ScanStrategy::TcpConnect => Box::new(TcpConnectScan),
@@ -97,12 +107,12 @@ fn run(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    let strategy = get_strategy(args.strategy);
+    let strategy = get_strategy(&args.strategy);
     let start_time = std::time::Instant::now();
     let result = strategy.scan(&args.addr, &args.port_range)?;
     let duration = start_time.elapsed();
 
-    print_results(args.addr, args.port_range, result, duration);
+    print_results(&args, result, duration);
 
     Ok(())
 }
