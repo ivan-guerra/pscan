@@ -26,9 +26,9 @@ struct Args {
         long,
         value_enum,
         default_value_t = ScanProtocol::Tcp,
-        help = "Scan strategy"
+        help = "Scan protocol"
     )]
-    strategy: ScanProtocol,
+    scan_protocol: ScanProtocol,
 
     #[arg(short, long, default_value_t, help = "Port range to scan")]
     port_range: PortRange,
@@ -39,14 +39,14 @@ struct Args {
 
 #[doc(hidden)]
 fn run(args: Args) -> Result<(), Box<dyn std::error::Error>> {
-    let get_scanner = |strategy: &ScanProtocol| -> Box<dyn Scan> {
-        match strategy {
+    let get_scanner = |protocol: &ScanProtocol| -> Box<dyn Scan> {
+        match protocol {
             ScanProtocol::Tcp => Box::new(TcpScanner),
             ScanProtocol::Udp => Box::new(UdpScanner),
         }
     };
 
-    let scanner = get_scanner(&args.strategy);
+    let scanner = get_scanner(&args.scan_protocol);
     let start_time = std::time::Instant::now();
     let results = scanner.scan(&args.addr, &args.port_range);
     let duration = start_time.elapsed();
