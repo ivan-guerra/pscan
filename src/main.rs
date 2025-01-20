@@ -34,19 +34,8 @@ fn print_results(
 ) {
     println!("pscan report for {}:{}", ip, ports);
 
-    let num_filtered = results
-        .iter()
-        .filter(|r| r.state == results::PortState::Filtered)
-        .count();
-    if num_filtered > 0 {
-        println!("Not shown: {} filtered ports", num_filtered);
-    }
-
     println!("{:12} {:12}", "PORT", "STATE");
-    results
-        .iter()
-        .filter(|r| r.state != results::PortState::Filtered)
-        .for_each(|r| println!("{}", r));
+    results.iter().for_each(|r| println!("{}", r));
 
     println!(
         "\npscan done: scanned in {:.2} seconds",
