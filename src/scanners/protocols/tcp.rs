@@ -1,46 +1,77 @@
 use crate::results::{PortState, ScanResult};
 use crate::scanners::{PortRange, Scan, ScanProtocol, ScanResults};
 use std::net::{TcpStream, ToSocketAddrs};
+use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::Duration;
 
 pub struct TcpScanner;
 
 impl Scan for TcpScanner {
-    fn scan(
-        &self,
-        addr: &std::net::IpAddr,
-        port_range: &PortRange,
-    ) -> Result<ScanResults, Box<dyn std::error::Error>> {
-        let mut results =
-            ScanResults::with_capacity((port_range.end - port_range.start + 1) as usize);
+    fn scan(&self, addr: &std::net::IpAddr, port_range: &PortRange) -> ScanResults {
+        let ports: Vec<u16> = (port_range.start..=port_range.end).collect();
+        let n_threads = num_cpus::get().min(16);
+        let chunk_size = ports.len().div_ceil(n_threads);
+        let addr = Arc::new(*addr);
+        let results = Arc::new(Mutex::new(ScanResults::new()));
 
-        for port in port_range.start..=port_range.end {
-            let target = format!("{}:{}", addr, port);
-            match check_tcp_connection(target) {
-                Ok(state) => {
-                    results.push(ScanResult::new(ScanProtocol::Tcp, port, state));
-                }
-                Err(e) => {
-                    return Err(e);
-                }
+        let handles: Vec<_> = ports
+            .chunks(chunk_size)
+            .enumerate()
+            .map(|(i, chunk)| {
+                let addr = Arc::clone(&addr);
+                let results = Arc::clone(&results);
+                let ports = chunk.to_vec();
+
+                thread::Builder::new()
+                    .name(format!("tcp-scanner-{}", i))
+                    .spawn(move || {
+                        for port in ports {
+                            let target = format!("{}:{}", addr, port);
+                            if let Some(state) = check_tcp_connection(&target) {
+                                let mut results = results.lock().unwrap();
+                                results.push(ScanResult::new(ScanProtocol::Tcp, port, state));
+                            }
+                        }
+                    })
+                    .expect("Failed to spawn thread")
+            })
+            .collect();
+
+        for handle in handles {
+            if let Err(e) = handle.join() {
+                eprintln!("Thread panicked: {:?}", e);
             }
         }
-        Ok(results)
+
+        Arc::try_unwrap(results)
+            .expect("Failed to unwrap Arc")
+            .into_inner()
+            .expect("Failed to acquire mutex lock")
     }
 }
 
-fn check_tcp_connection<A: ToSocketAddrs>(
-    addr: A,
-) -> Result<PortState, Box<dyn std::error::Error>> {
-    let target = addr
-        .to_socket_addrs()?
-        .next()
-        .ok_or("Invalid socket address")?;
+fn check_tcp_connection<A: ToSocketAddrs>(addr: A) -> Option<PortState> {
+    let target = match addr.to_socket_addrs() {
+        Ok(mut addrs) => match addrs.next() {
+            Some(addr) => addr,
+            None => {
+                eprintln!("Error: No valid socket address found");
+                return None;
+            }
+        },
+        Err(e) => {
+            eprintln!("Error resolving address: {}", e);
+            return None;
+        }
+    };
 
-    let timeout = Duration::from_millis(25);
-    match TcpStream::connect_timeout(&target, timeout) {
-        Ok(_) => Ok(PortState::Open),
-        Err(e) if e.kind() == std::io::ErrorKind::ConnectionRefused => Ok(PortState::Closed),
-        Err(_) => Ok(PortState::Filtered),
+    match TcpStream::connect_timeout(&target, Duration::from_millis(25)) {
+        Ok(_) => Some(PortState::Open),
+        Err(e) if e.kind() == std::io::ErrorKind::ConnectionRefused => Some(PortState::Closed),
+        Err(e) => {
+            eprintln!("Connection error for {}: {}", target, e);
+            Some(PortState::Filtered)
+        }
     }
 }

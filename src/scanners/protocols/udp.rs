@@ -2,55 +2,99 @@ use crate::{
     results::{PortState, ScanResult},
     scanners::{PortRange, Scan, ScanProtocol, ScanResults},
 };
-use std::net::ToSocketAddrs;
-use std::net::UdpSocket;
+use std::net::{ToSocketAddrs, UdpSocket};
+use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::Duration;
 
 pub struct UdpScanner;
 
 impl Scan for UdpScanner {
-    fn scan(
-        &self,
-        addr: &std::net::IpAddr,
-        port_range: &PortRange,
-    ) -> Result<ScanResults, Box<dyn std::error::Error>> {
-        let mut results =
-            ScanResults::with_capacity((port_range.end - port_range.start + 1) as usize);
+    fn scan(&self, addr: &std::net::IpAddr, port_range: &PortRange) -> ScanResults {
+        let ports: Vec<u16> = (port_range.start..=port_range.end).collect();
+        let n_threads = num_cpus::get().min(16);
+        let chunk_size = ports.len().div_ceil(n_threads);
+        let target = Arc::new(*addr);
+        let results = Arc::new(Mutex::new(ScanResults::new()));
 
-        for port in port_range.start..=port_range.end {
-            let target = format!("{}:{}", addr, port);
-            match check_udp_connection(target) {
-                Ok(state) => {
-                    results.push(ScanResult::new(ScanProtocol::Udp, port, state));
-                }
-                Err(e) => {
-                    return Err(e);
-                }
+        let handles: Vec<_> = ports
+            .chunks(chunk_size)
+            .enumerate()
+            .map(|(i, chunk)| {
+                let addr = Arc::clone(&target);
+                let results = Arc::clone(&results);
+                let ports = chunk.to_vec();
+
+                thread::Builder::new()
+                    .name(format!("udp-scanner-{}", i))
+                    .spawn(move || {
+                        let socket = match UdpSocket::bind("0.0.0.0:0") {
+                            Ok(s) => {
+                                if let Err(e) = s.set_read_timeout(Some(Duration::from_millis(25)))
+                                {
+                                    eprintln!("Failed to set socket read timeout: {}", e);
+                                    return;
+                                }
+                                s
+                            }
+                            Err(e) => {
+                                eprintln!("Failed to bind UDP socket: {}", e);
+                                return;
+                            }
+                        };
+
+                        for port in ports {
+                            let target = format!("{}:{}", addr, port);
+                            if let Some(state) = check_udp_port(&socket, &target) {
+                                let mut results = results.lock().unwrap();
+                                results.push(ScanResult::new(ScanProtocol::Udp, port, state));
+                            }
+                        }
+                    })
+                    .expect("Failed to spawn thread")
+            })
+            .collect();
+
+        for handle in handles {
+            if let Err(e) = handle.join() {
+                eprintln!("Thread panicked: {:?}", e);
             }
         }
-        Ok(results)
+
+        Arc::try_unwrap(results)
+            .expect("Failed to unwrap Arc")
+            .into_inner()
+            .expect("Failed to acquire mutex lock")
     }
 }
 
-fn check_udp_connection<A: ToSocketAddrs>(
-    addr: A,
-) -> Result<PortState, Box<dyn std::error::Error>> {
-    let socket = UdpSocket::bind("0.0.0.0:0")?;
-    socket.set_read_timeout(Some(Duration::from_millis(25)))?;
+fn check_udp_port(socket: &UdpSocket, addr: &str) -> Option<PortState> {
+    let target_addr = match addr.to_socket_addrs() {
+        Ok(mut addrs) => match addrs.next() {
+            Some(addr) => addr,
+            None => {
+                eprintln!("Error: No valid socket address found for {}", addr);
+                return None;
+            }
+        },
+        Err(e) => {
+            eprintln!("Error resolving address {}: {}", addr, e);
+            return None;
+        }
+    };
 
-    let target_addr = addr.to_socket_addrs()?.next().ok_or_else(|| {
-        std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Could not resolve target address",
-        )
-    })?;
+    if let Err(e) = socket.send_to(&[], target_addr) {
+        eprintln!("Error sending UDP packet to {}: {}", addr, e);
+        return None;
+    }
 
-    socket.send_to(&[], target_addr)?;
-
-    let mut buf = vec![0; 1024];
+    let mut buf = [0; 1024];
     match socket.recv_from(&mut buf) {
-        Ok(_) => Ok(PortState::Open),
-        Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => Ok(PortState::Closed),
-        Err(e) => Err(Box::new(e)),
+        Ok(_) => Some(PortState::Open),
+        Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => Some(PortState::Closed),
+        Err(e) => {
+            eprintln!("Error receiving UDP response from {}: {}", addr, e);
+            None
+        }
     }
 }

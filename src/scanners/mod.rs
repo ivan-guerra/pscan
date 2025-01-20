@@ -65,9 +65,5 @@ impl Display for ScanProtocol {
 }
 
 pub trait Scan {
-    fn scan(
-        &self,
-        addr: &std::net::IpAddr,
-        port_range: &PortRange,
-    ) -> Result<ScanResults, Box<dyn std::error::Error>>;
+    fn scan(&self, addr: &std::net::IpAddr, port_range: &PortRange) -> ScanResults;
 }

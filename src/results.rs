@@ -24,6 +24,7 @@ impl Display for PortState {
     }
 }
 
+#[derive(Debug)]
 pub struct ScanResult {
     pub protocol: ScanProtocol,
     pub port: u16,

@@ -36,7 +36,7 @@ fn run(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 
     let scanner = get_scanner(&args.strategy);
     let start_time = std::time::Instant::now();
-    let results = scanner.scan(&args.addr, &args.port_range)?;
+    let results = scanner.scan(&args.addr, &args.port_range);
     let duration = start_time.elapsed();
 
     results::print_results(&args, results, duration);
