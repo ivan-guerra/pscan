@@ -47,7 +47,6 @@ impl FromStr for PortRange {
 
 #[derive(Debug, Clone, ValueEnum)]
 pub enum ScanStrategy {
-    TcpHalfOpen,
     TcpConnect,
     Udp,
 }

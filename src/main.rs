@@ -1,7 +1,7 @@
 use clap::Parser;
 use once_cell::sync::Lazy;
 use scanners::{
-    strategies::{TcpConnectScan, TcpHalfOpenScan, UdpScan},
+    strategies::{TcpConnectScan, UdpScan},
     PortRange, ScanStrategy, Strategy,
 };
 use std::collections::HashMap;
@@ -49,7 +49,7 @@ struct Args {
         short,
         long,
         value_enum,
-        default_value_t = ScanStrategy::TcpHalfOpen,
+        default_value_t = ScanStrategy::TcpConnect,
         help = "Scan strategy"
     )]
     strategy: ScanStrategy,
@@ -101,7 +101,6 @@ fn print_results(args: &Args, results: results::ScanResults, duration: std::time
 fn run(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     let get_strategy = |strategy: &ScanStrategy| -> Box<dyn Strategy> {
         match strategy {
-            ScanStrategy::TcpHalfOpen => Box::new(TcpHalfOpenScan),
             ScanStrategy::TcpConnect => Box::new(TcpConnectScan),
             ScanStrategy::Udp => Box::new(UdpScan),
         }
