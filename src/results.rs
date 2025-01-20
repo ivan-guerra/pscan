@@ -51,15 +51,4 @@ impl ScanResult {
     }
 }
 
-impl Display for ScanResult {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{:12} {:12}",
-            format!("{}/{}", self.port, self.protocol),
-            self.state
-        )
-    }
-}
-
 pub type ScanResults = Vec<ScanResult>;

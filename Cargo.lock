@@ -130,6 +130,7 @@ name = "pscan"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "once_cell",
 ]
 
 [[package]]

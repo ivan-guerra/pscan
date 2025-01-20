@@ -1,11 +1,43 @@
 use clap::Parser;
+use once_cell::sync::Lazy;
 use scanners::{
     strategies::{TcpConnectScan, TcpHalfOpenScan, UdpScan},
     PortRange, ScanStrategy, Strategy,
 };
+use std::collections::HashMap;
 
 mod results;
 mod scanners;
+
+static TCP_SERVICES: Lazy<HashMap<u16, &str>> = Lazy::new(|| {
+    let tcp_services = include_str!("../services/iana_tcp_services.csv");
+    let map = tcp_services
+        .lines()
+        .skip(1)
+        .fold(HashMap::new(), |mut acc, line| {
+            let mut parts = line.split(',');
+            let service = parts.next().unwrap();
+            let port = parts.next().unwrap().parse::<u16>().unwrap();
+            acc.insert(port, service);
+            acc
+        });
+    map
+});
+
+static UDP_SERVICES: Lazy<HashMap<u16, &str>> = Lazy::new(|| {
+    let tcp_services = include_str!("../services/iana_udp_services.csv");
+    let map = tcp_services
+        .lines()
+        .skip(1)
+        .fold(HashMap::new(), |mut acc, line| {
+            let mut parts = line.split(',');
+            let service = parts.next().unwrap();
+            let port = parts.next().unwrap().parse::<u16>().unwrap();
+            acc.insert(port, service);
+            acc
+        });
+    map
+});
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -34,8 +66,21 @@ fn print_results(
 ) {
     println!("pscan report for {}:{}", ip, ports);
 
-    println!("{:12} {:12}", "PORT", "STATE");
-    results.iter().for_each(|r| println!("{}", r));
+    println!("{:<10} {:<10} {:<10}", "PORT", "STATE", "SERVICE");
+    for result in results {
+        let service = match result.protocol {
+            results::ScanProtocol::Tcp => TCP_SERVICES.get(&result.port),
+            results::ScanProtocol::Udp => UDP_SERVICES.get(&result.port),
+        }
+        .unwrap_or(&"unknown");
+
+        println!(
+            "{:<10} {:<10} {:<10}",
+            format!("{}/{}", result.port, result.protocol),
+            format!("{}", result.state),
+            service
+        );
+    }
 
     println!(
         "\npscan done: scanned in {:.2} seconds",
