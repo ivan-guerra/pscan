@@ -6,7 +6,8 @@
 //! - Managing collections of scan results (`ScanResults`)
 //! - Mapping port numbers to service names using IANA registries
 //! - Formatting and displaying scan results
-use crate::scanners::ScanProtocol;
+use crate::scanners::{Address, ScanProtocol};
+use crate::utils;
 use crate::Args;
 use clap::ValueEnum;
 use once_cell::sync::Lazy;
@@ -104,7 +105,22 @@ static UDP_SERVICES: Lazy<HashMap<u16, &str>> = Lazy::new(|| {
 /// 3. Table of discovered ports with their states and services
 /// 4. Footer showing total scan duration
 pub fn print_results(args: &Args, results: ScanResults, duration: std::time::Duration) {
-    println!("pscan report for {}:{}", args.addr, args.port_range);
+    match args.addr {
+        Address::Ip(ip) => {
+            println!("pscan report for {}:{}", ip, args.port_range);
+        }
+        Address::Hostname(ref hostname) => match utils::resolve_hostname_to_ip(hostname) {
+            Some(ip) => {
+                println!("pscan report for {} ({}):{}", hostname, ip, args.port_range);
+            }
+            None => {
+                println!(
+                    "pscan report for {} (unknown):{}",
+                    hostname, args.port_range
+                );
+            }
+        },
+    }
 
     for state in &args.ignored_state {
         let ignored_cnt = results.iter().filter(|r| r.state == *state).count();
