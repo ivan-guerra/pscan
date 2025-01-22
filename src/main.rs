@@ -49,8 +49,7 @@ fn run(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             .ok_or(format!("Could not resolve hostname {}", hostname))?,
     };
 
-    let result = utils::ping_host(&addr);
-    match result {
+    match utils::ping_host(&addr) { 
         Ok(reply) => println!("Host is up ({}ms latency).", reply.rtt),
         Err(e) => return Err(format!("Host is unreachable, {:?}", e).into()),
     }
