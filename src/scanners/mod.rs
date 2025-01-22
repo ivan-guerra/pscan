@@ -1,32 +1,66 @@
 //! Core scanning functionality and types for port scanning operations.
 //!
-//! This module provides:
-//! - Port range definitions and parsing (`PortRange`)
-//! - Protocol specifications (`ScanProtocol`)
-//! - Core scanning trait (`Scan`)
-//! - Protocol-specific scanner implementations (TCP and UDP)
+//! This module provides the core components for network port scanning:
 //!
-//! The module is organized with protocol-specific implementations in
-//! the `protocols` submodule, while keeping common types and traits
-//! in the root module scope.
+//! # Key Components
+//! - [`Address`] - Represents network addresses (IP or hostname)
+//! - [`PortRange`] - Defines ranges of ports to scan
+//! - [`ScanProtocol`] - Specifies supported protocols (TCP/UDP)
+//! - [`Scan`] trait - Core scanning interface
+//! - Protocol-specific scanners ([`TcpScanner`], [`UdpScanner`])
 //!
 //! # Example
 //! ```no_run
 //! use pscan::scanners::{PortRange, TcpScanner, Scan};
 //!
 //! let scanner = TcpScanner::new();
-//! let range = PortRange { start: 1, end: 1024 };
+//! let range = PortRange::new(1, 1024);
 //! let addr = "127.0.0.1".parse().unwrap();
 //! let results = scanner.scan(&addr, &range);
 //! ```
 use crate::results::ScanResults;
 use clap::ValueEnum;
-use std::fmt::Display;
+use std::fmt::{self, Display, Formatter};
+use std::net::IpAddr;
 use std::str::FromStr;
 
 pub mod protocols;
 pub use protocols::TcpScanner;
 pub use protocols::UdpScanner;
+
+/// Represents a network address that can be either an IP address or a hostname
+#[derive(Debug, Clone)]
+pub enum Address {
+    /// An IP address (either IPv4 or IPv6)
+    Ip(IpAddr),
+    /// A domain name or hostname as a string
+    Hostname(String),
+}
+
+impl Display for Address {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            Address::Ip(ip) => write!(f, "{}", ip),
+            Address::Hostname(hostname) => write!(f, "{}", hostname),
+        }
+    }
+}
+
+impl FromStr for Address {
+    type Err = String;
+
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        if let Ok(ip) = input.parse::<IpAddr>() {
+            Ok(Address::Ip(ip))
+        } else {
+            Ok(Address::Hostname(input.to_string()))
+        }
+    }
+}
+
+pub fn parse_addr(input: &str) -> Result<Address, String> {
+    input.parse::<Address>()
+}
 
 /// Represents a range of ports to be scanned.
 #[derive(Debug, Clone)]
