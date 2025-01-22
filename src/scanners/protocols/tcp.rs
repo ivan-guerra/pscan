@@ -11,7 +11,12 @@ impl Scan for TcpScanner {
     /// Performs a TCP port scan on the specified IP address within the given port range.
     ///
     /// The scan is performed using multiple threads (up to 16).
-    fn scan(&self, addr: &std::net::IpAddr, port_range: &PortRange) -> ScanResults {
+    fn scan(
+        &self,
+        addr: &std::net::IpAddr,
+        port_range: &PortRange,
+        timeout_ms: u64,
+    ) -> ScanResults {
         let ports: Vec<u16> = (port_range.start..=port_range.end).collect();
         let n_threads = num_cpus::get().min(16);
         let chunk_size = ports.len().div_ceil(n_threads);
@@ -31,7 +36,7 @@ impl Scan for TcpScanner {
                     .spawn(move || {
                         for port in ports {
                             let target = format!("{}:{}", addr, port);
-                            if let Some(state) = check_tcp_connection(&target) {
+                            if let Some(state) = check_tcp_connection(&target, timeout_ms) {
                                 let mut results = results.lock().unwrap();
                                 results.push(ScanResult::new(ScanProtocol::Tcp, port, state));
                             }
@@ -58,7 +63,7 @@ impl Scan for TcpScanner {
 }
 
 /// Attempts to establish a TCP connection to the specified address and determines the port state.
-fn check_tcp_connection<A: ToSocketAddrs>(addr: A) -> Option<PortState> {
+fn check_tcp_connection<A: ToSocketAddrs>(addr: A, timeout_ms: u64) -> Option<PortState> {
     let target = match addr.to_socket_addrs() {
         Ok(mut addrs) => match addrs.next() {
             Some(addr) => addr,
@@ -73,7 +78,7 @@ fn check_tcp_connection<A: ToSocketAddrs>(addr: A) -> Option<PortState> {
         }
     };
 
-    match TcpStream::connect_timeout(&target, Duration::from_millis(25)) {
+    match TcpStream::connect_timeout(&target, Duration::from_millis(timeout_ms)) {
         Ok(_) => Some(PortState::Open),
         Err(e) if e.kind() == std::io::ErrorKind::ConnectionRefused => Some(PortState::Closed),
         Err(_) => Some(PortState::Filtered),

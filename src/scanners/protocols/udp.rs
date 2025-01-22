@@ -13,7 +13,12 @@ impl Scan for UdpScanner {
     /// Performs a UDP port scan on the specified IP address within the given port range.
     ///
     /// The scan is performed using multiple threads (up to 16) to improve performance.
-    fn scan(&self, addr: &std::net::IpAddr, port_range: &PortRange) -> ScanResults {
+    fn scan(
+        &self,
+        addr: &std::net::IpAddr,
+        port_range: &PortRange,
+        _timeout_ms: u64,
+    ) -> ScanResults {
         let ports: Vec<u16> = (port_range.start..=port_range.end).collect();
         let n_threads = num_cpus::get().min(16);
         let chunk_size = ports.len().div_ceil(n_threads);

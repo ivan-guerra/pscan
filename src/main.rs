@@ -39,6 +39,9 @@ struct Args {
 
     #[arg(short, long, help = "Port states ignored in the scan output")]
     ignored_state: Vec<results::PortState>,
+
+    #[arg(short, long, default_value_t = 25, help = "Connection timeout in ms")]
+    timeout: u64,
 }
 
 #[doc(hidden)]
@@ -62,7 +65,7 @@ fn run(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     };
     let scanner = get_scanner(&args.scan_protocol);
     let start_time = std::time::Instant::now();
-    let results = scanner.scan(&addr, &args.port_range);
+    let results = scanner.scan(&addr, &args.port_range, args.timeout);
     let duration = start_time.elapsed();
 
     results::print_results(&args, results, duration);

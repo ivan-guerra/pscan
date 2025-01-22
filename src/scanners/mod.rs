@@ -130,5 +130,6 @@ impl Display for ScanProtocol {
 /// This trait must be implemented by any scanner that performs port scanning operations,
 /// regardless of the protocol or method used.
 pub trait Scan {
-    fn scan(&self, addr: &std::net::IpAddr, port_range: &PortRange) -> ScanResults;
+    fn scan(&self, addr: &std::net::IpAddr, port_range: &PortRange, timeout_ms: u64)
+        -> ScanResults;
 }
