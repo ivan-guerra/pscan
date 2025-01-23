@@ -86,11 +86,19 @@ impl Scan for TcpScanner {
 
 /// Attempts to establish a TCP connection to the specified address and determines the port state.
 fn check_tcp_connection<A: ToSocketAddrs>(addr: A, timeout_ms: u64) -> Option<PortState> {
-    let target = addr
-        .to_socket_addrs()
-        .expect("Error getting socket addrs")
-        .next()
-        .unwrap();
+    let target = match addr.to_socket_addrs() {
+        Ok(mut addrs) => match addrs.next() {
+            Some(addr) => addr,
+            None => {
+                eprintln!("Error: No valid socket address found");
+                return None;
+            }
+        },
+        Err(e) => {
+            eprintln!("Error resolving address: {}", e);
+            return None;
+        }
+    };
 
     match TcpStream::connect_timeout(&target, Duration::from_millis(timeout_ms)) {
         Ok(_) => Some(PortState::Open),
