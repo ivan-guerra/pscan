@@ -1,3 +1,4 @@
+//! Protocol-specific scanner implementations.
 pub mod tcp;
 pub mod udp;
 

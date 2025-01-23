@@ -1,3 +1,27 @@
+//! UDP port scanning implementation.
+//!
+//! This module provides UDP port scanning functionality through the `UdpScanner` type,
+//! which implements the `Scan` trait. UDP scanning is performed by sending empty
+//! datagrams to target ports and analyzing responses.
+//!
+//! # Limitations
+//!
+//! UDP scanning is less reliable than TCP scanning because:
+//! - Many UDP services don't respond to empty datagrams
+//! - Responses may be rate-limited by firewalls
+//! - Root/Administrator privileges may be required
+//!
+//! # Example
+//!
+//! ```no_run
+//! use pscan::scanners::{PortRange, UdpScanner, Scan};
+//! use std::net::IpAddr;
+//!
+//! let scanner = UdpScanner;
+//! let addr: IpAddr = "127.0.0.1".parse().unwrap();
+//! let range = PortRange::new(1, 1024);
+//! let results = scanner.scan(&addr, &range, 1000);
+//! ```
 use crate::{
     results::{PortState, ScanResult},
     scanners::{PortRange, Scan, ScanProtocol, ScanResults},

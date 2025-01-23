@@ -1,3 +1,25 @@
+//! TCP port scanning implementation.
+//!
+//! This module provides TCP port scanning functionality through the `TcpScanner` type,
+//! which implements the `Scan` trait. It performs TCP connect scans by attempting to
+//! establish full TCP connections to target ports.
+//!
+//! # Example
+//!
+//! ```no_run
+//! use pscan::scanners::{PortRange, TcpScanner, Scan};
+//! use std::net::IpAddr;
+//!
+//! let scanner = TcpScanner;
+//! let addr: IpAddr = "127.0.0.1".parse().unwrap();
+//! let range = PortRange::new(1, 1024);
+//! let results = scanner.scan(&addr, &range, 1000);
+//! ```
+//!
+//! # Note
+//!
+//! TCP connect scans are reliable but potentially slower than other scanning
+//! methods due to the full connection establishment process.
 use crate::results::{PortState, ScanResult};
 use crate::scanners::{PortRange, Scan, ScanProtocol, ScanResults};
 use std::net::{TcpStream, ToSocketAddrs};
@@ -64,19 +86,11 @@ impl Scan for TcpScanner {
 
 /// Attempts to establish a TCP connection to the specified address and determines the port state.
 fn check_tcp_connection<A: ToSocketAddrs>(addr: A, timeout_ms: u64) -> Option<PortState> {
-    let target = match addr.to_socket_addrs() {
-        Ok(mut addrs) => match addrs.next() {
-            Some(addr) => addr,
-            None => {
-                eprintln!("Error: No valid socket address found");
-                return None;
-            }
-        },
-        Err(e) => {
-            eprintln!("Error resolving address: {}", e);
-            return None;
-        }
-    };
+    let target = addr
+        .to_socket_addrs()
+        .expect("Error getting socket addrs")
+        .next()
+        .unwrap();
 
     match TcpStream::connect_timeout(&target, Duration::from_millis(timeout_ms)) {
         Ok(_) => Some(PortState::Open),
