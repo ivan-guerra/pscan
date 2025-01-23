@@ -30,6 +30,7 @@ use std::net::{ToSocketAddrs, UdpSocket};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
+use std::{io, net::IpAddr};
 
 pub struct UdpScanner;
 
@@ -41,7 +42,7 @@ impl Scan for UdpScanner {
         &self,
         addr: &std::net::IpAddr,
         port_range: &PortRange,
-        _timeout_ms: u64,
+        timeout_ms: u64,
     ) -> ScanResults {
         let ports: Vec<u16> = (port_range.start..=port_range.end).collect();
         let n_threads = num_cpus::get().min(16);
@@ -60,9 +61,14 @@ impl Scan for UdpScanner {
                 thread::Builder::new()
                     .name(format!("udp-scanner-{}", i))
                     .spawn(move || {
-                        let socket = match UdpSocket::bind("0.0.0.0:0") {
+                        let socket = match addr.as_ref() {
+                            IpAddr::V4(_) => UdpSocket::bind("0.0.0.0:0"),
+                            IpAddr::V6(_) => UdpSocket::bind("[::]:0"),
+                        };
+                        let socket = match socket {
                             Ok(s) => {
-                                if let Err(e) = s.set_read_timeout(Some(Duration::from_millis(25)))
+                                if let Err(e) =
+                                    s.set_read_timeout(Some(Duration::from_millis(timeout_ms)))
                                 {
                                     eprintln!("Failed to set socket read timeout: {}", e);
                                     return;
@@ -124,13 +130,24 @@ fn check_udp_port(socket: &UdpSocket, addr: &str) -> Option<PortState> {
         return None;
     }
 
-    let mut buf = [0; 1024];
-    match socket.recv_from(&mut buf) {
-        Ok(_) => Some(PortState::Open),
-        Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => Some(PortState::Closed),
-        Err(e) => {
-            eprintln!("Error receiving UDP response from {}: {}", addr, e);
-            None
+    let mut buffer = [0u8; 512];
+    loop {
+        match socket.recv_from(&mut buffer) {
+            Ok((_, src_addr)) => {
+                // If we receive any data, consider the port Open
+                if src_addr.to_string() == addr {
+                    return Some(PortState::Open);
+                }
+            }
+            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                // Timeout reached, port is considered Filtered
+                return Some(PortState::Filtered);
+            }
+            Err(ref e) if e.kind() == io::ErrorKind::ConnectionReset => {
+                // ICMP Destination Unreachable received
+                return Some(PortState::Closed);
+            }
+            Err(_) => return None, // Handle other unexpected errors
         }
     }
 }
